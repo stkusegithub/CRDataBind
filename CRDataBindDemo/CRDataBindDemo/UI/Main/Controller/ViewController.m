@@ -12,7 +12,7 @@
 
 #import "CRDataBind.h"
 
-@interface ViewController () <UITableViewDelegate, UITableViewDataSource>
+@interface ViewController () <UITableViewDelegate, UITableViewDataSource, UIGestureRecognizerDelegate>
 
 @property (nonatomic, strong) LFScrollNumber *scrollNumView;
 @property (nonatomic, strong) LotteryViewModel *lotteryVM;
@@ -45,6 +45,7 @@
     [self setupBind];
     
     UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(onTapAction)];
+    tap.delegate = self;
     [self.view addGestureRecognizer:tap];
 }
 
@@ -52,6 +53,7 @@
 
 - (void)loadUI {
     [self.numsDisplayView addSubview:self.scrollNumView];
+    self.scrollNumView.center = CGPointMake(self.view.frame.size.width / 2, 50.0);
 }
 
 - (void)setupBind {
@@ -118,6 +120,40 @@
     });
     
 //    NSLog(@">>>self retainCount=%ld", CFGetRetainCount((__bridge CFTypeRef)(self)));
+    
+    /**
+     绑定6
+     model.action <--->事件绑定
+     */
+    CRDataBind
+    ._inout(self.lotteryVM, @"actionForIndexString")
+    ._out_key_any(@"ViewModelAction", ^(NSString *actionForIndexString) {
+        [weakSelf dealActionWith:actionForIndexString];
+    });
+}
+    
+- (void)dealActionWith:(NSString *)actionForIndexString {
+    if (!actionForIndexString) {
+        return;
+    }
+    NSArray *arr = [actionForIndexString componentsSeparatedByString:@"-"];
+    if (arr.count <= 1) {
+        return;
+    }
+    ViewModelAction action = (ViewModelAction)[arr[0] integerValue];
+    LotteryModel *model = nil;
+    NSInteger index = [arr[1] integerValue];
+    if (self.lotteryVM.array.count > index) {
+        model = self.lotteryVM.array[index];
+    }
+    switch (action) {
+        case ViewModelActionClickCell:
+            NSLog(@">>>点击cell事件处理：%@！！！", model);
+            break;
+            
+        default:
+            break;
+    }
 }
 
 #pragma mark - Private SEL
@@ -192,6 +228,15 @@
     [self.view endEditing:YES];
 }
 
+#pragma mark - UIGestureRecognizerDelegate
+
+- (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldReceiveTouch:(UITouch *)touch {
+    if ([NSStringFromClass([touch.view class]) isEqualToString:@"UITableViewCellContentView"]) {
+        return NO;
+    }
+    return YES;
+}
+
 #pragma mark - UITableViewDelegate/DataSource
 
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
@@ -219,6 +264,7 @@
 
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
     [tableView deselectRowAtIndexPath:indexPath animated:YES];
+    self.lotteryVM.actionForIndexString = [NSString stringWithFormat:@"1-%ld", (long)indexPath.row];
 }
 
 #pragma mark - Lazy Property
@@ -226,8 +272,6 @@
 - (LFScrollNumber *)scrollNumView {
     if (!_scrollNumView) {
         _scrollNumView = [[LFScrollNumber alloc] initWithPoint:CGPointZero andPlaces:3 andLabelSize:CGSizeMake(42.0, 56.0) andLabelMargin:20.0];
-        _scrollNumView.center = CGPointMake(self.view.frame.size.width / 2, 50.0);
-        [self.view addSubview:_scrollNumView];
         _scrollNumView.backgroundImage = [UIImage imageNamed:@"LFScrollBackColor"];
         _scrollNumView.textImage = [UIImage imageNamed:@"LFScrollTextColor"];
         _scrollNumView.scrollType = LFScrollNumAnimationTypeNormal;

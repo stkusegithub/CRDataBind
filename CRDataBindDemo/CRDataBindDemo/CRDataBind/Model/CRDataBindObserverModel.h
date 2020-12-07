@@ -31,7 +31,7 @@ NS_ASSUME_NONNULL_BEGIN
 @property(nonatomic, assign) DBPropertyType propertyType;
 
 //UI
-@property(nonatomic, assign) SEL selector;
+@property(nonatomic, assign, nullable) SEL selector;
 @property(nonatomic, assign) UIControlEvents ctrlEvent;
 
 #pragma mark - <-- Instance -->
